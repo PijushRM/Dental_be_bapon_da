@@ -46,9 +46,41 @@ export async function requireDoctorId(request: Request): Promise<string> {
   if (!token) throw new HttpError(401, "Missing bearer token");
   try {
     const { payload } = await jwtVerify(token, secret(), { algorithms: ["HS256"] });
+    // File links carry an audience; only plain session tokens are accepted here.
+    if (payload.aud !== undefined) throw new Error("not a session token");
     if (!payload.sub || !isValidObjectId(payload.sub)) throw new Error("bad subject");
     return payload.sub;
   } catch {
     throw new HttpError(401, "Invalid or expired token");
+  }
+}
+
+const FILE_AUDIENCE = "file";
+const FILE_LINK_TTL = "5m";
+
+// A short-lived token that opens one file, for viewers that can't send headers.
+export async function signFileToken(doctorId: string, fileId: string): Promise<string> {
+  return new SignJWT({ fid: fileId })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(doctorId)
+    .setAudience(FILE_AUDIENCE)
+    .setIssuedAt()
+    .setExpirationTime(FILE_LINK_TTL)
+    .sign(secret());
+}
+
+// Returns the doctor id if `sig` opens `fileId`, else throws 401.
+export async function verifyFileToken(sig: string, fileId: string): Promise<string> {
+  try {
+    const { payload } = await jwtVerify(sig, secret(), {
+      algorithms: ["HS256"],
+      audience: FILE_AUDIENCE,
+    });
+    if (payload.fid !== fileId || !payload.sub || !isValidObjectId(payload.sub)) {
+      throw new Error("wrong file");
+    }
+    return payload.sub;
+  } catch {
+    throw new HttpError(401, "Invalid or expired file link");
   }
 }

@@ -48,6 +48,11 @@ export async function deleteFile(fileId: string) {
   await (await bucket()).delete(new ObjectId(fileId)).catch(() => undefined);
 }
 
+export async function assertFileOwner(fileId: string, doctorId: string) {
+  const [doc] = await (await bucket()).find({ _id: new ObjectId(fileId) }).limit(1).toArray();
+  if (!doc || doc.metadata?.doctorId !== doctorId) throw new HttpError(404, "File not found");
+}
+
 // Streams a stored file back, only to the doctor who owns it.
 export async function fileResponse(fileId: string, doctorId: string): Promise<Response> {
   const b = await bucket();
