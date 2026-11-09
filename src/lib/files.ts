@@ -29,7 +29,7 @@ export async function saveUpload(
   }
   if (file.size === 0) throw new HttpError(400, "File is empty");
   if (file.size > MAX_FILE_BYTES) {
-    throw new HttpError(413, `File must be ${MAX_FILE_BYTES / (1024 * 1024)} MB or smaller`);
+    throw new HttpError(413, `File must be ${maxUploadMb()} MB or smaller`);
   }
   const buffer = Buffer.from(await file.arrayBuffer());
   if (!matchesSignature(buffer, file.type)) {
@@ -87,6 +87,8 @@ export async function fileResponse(fileId: string, doctorId: string): Promise<Re
   });
 }
 
+const maxUploadMb = () => Math.round((MAX_FILE_BYTES / (1024 * 1024)) * 100) / 100;
+
 // Multipart overhead allowed on top of the file itself (other fields, boundaries).
 const FORM_OVERHEAD_BYTES = 1024 * 1024;
 
@@ -95,7 +97,7 @@ const FORM_OVERHEAD_BYTES = 1024 * 1024;
 export async function readUploadForm(request: Request): Promise<FormData> {
   const length = Number(request.headers.get("content-length") ?? 0);
   if (length > MAX_FILE_BYTES + FORM_OVERHEAD_BYTES) {
-    throw new HttpError(413, `File must be ${MAX_FILE_BYTES / (1024 * 1024)} MB or smaller`);
+    throw new HttpError(413, `File must be ${maxUploadMb()} MB or smaller`);
   }
   try {
     return await request.formData();

@@ -39,8 +39,11 @@ export async function signToken(doctorId: string): Promise<string> {
     .sign(secret());
 }
 
-// Reads "Authorization: Bearer <token>" and returns the doctor's id, or throws 401.
-export async function requireDoctorId(request: Request): Promise<string> {
+export type Session = { doctorId: string; issuedAt: number }; // issuedAt: seconds
+
+// Reads "Authorization: Bearer <token>" and returns who it is for and when it
+// was issued, or throws 401. Callers also check the account (see session.ts).
+export async function requireSession(request: Request): Promise<Session> {
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
   if (!token) throw new HttpError(401, "Missing bearer token");
@@ -49,10 +52,17 @@ export async function requireDoctorId(request: Request): Promise<string> {
     // File links carry an audience; only plain session tokens are accepted here.
     if (payload.aud !== undefined) throw new Error("not a session token");
     if (!payload.sub || !isValidObjectId(payload.sub)) throw new Error("bad subject");
-    return payload.sub;
+    if (typeof payload.iat !== "number") throw new Error("no issue time");
+    return { doctorId: payload.sub, issuedAt: payload.iat };
   } catch {
     throw new HttpError(401, "Invalid or expired token");
   }
+}
+
+// True when the password changed after this token was issued. Token times are
+// whole seconds, so a token from the same second as the change still counts.
+export function revokedBy(passwordChangedAt: Date | null | undefined, issuedAt: number) {
+  return !!passwordChangedAt && issuedAt < Math.floor(passwordChangedAt.getTime() / 1000);
 }
 
 const FILE_AUDIENCE = "file";

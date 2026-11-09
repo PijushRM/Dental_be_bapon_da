@@ -6,6 +6,9 @@ const DoctorSchema = new Schema(
   {
     identifier: { type: String, required: true, unique: true }, // email or registration ID, lowercased
     passwordHash: { type: String, required: true },
+    // Login tokens issued before this are rejected, so changing the password
+    // signs out every other phone.
+    passwordChangedAt: { type: Date, default: null },
     name: { type: String, default: "" },
     qualifications: { type: String, default: "" },
     speciality: { type: String, default: "" },
@@ -20,7 +23,7 @@ const DoctorSchema = new Schema(
   },
   { timestamps: true },
 );
-cleanJSON(DoctorSchema, ["passwordHash"]);
+cleanJSON(DoctorSchema, ["passwordHash", "passwordChangedAt"]);
 
 export type Doctor = InferSchemaType<typeof DoctorSchema>;
 export type DoctorDoc = HydratedDocument<Doctor>;

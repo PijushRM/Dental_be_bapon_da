@@ -97,7 +97,14 @@ export const profilePatchSchema = z
 export const DOC_TYPES = ["prescription", "report", "xray", "other"] as const;
 export const ACCEPTED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png"];
-export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+// Largest upload, from MAX_UPLOAD_MB in .env (the app has the same setting);
+// missing, zero or not a number falls back to 1 MB.
+const DEFAULT_MAX_UPLOAD_MB = 1;
+export function parseMaxUploadBytes(value: string | undefined): number {
+  const mb = Number(value?.trim() || NaN);
+  return Math.round((Number.isFinite(mb) && mb > 0 ? mb : DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024);
+}
+export const MAX_FILE_BYTES = parseMaxUploadBytes(process.env.MAX_UPLOAD_MB);
 
 export const rangeQuerySchema = z.object({
   from: isoDate.optional(),

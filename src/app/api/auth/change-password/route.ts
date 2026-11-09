@@ -15,6 +15,8 @@ export const POST = handle(async (request: Request) => {
   }
   const { next } = changePasswordSchema.parse(body);
   doctor.passwordHash = await hashPassword(next);
+  // Signs out every other phone; this one gets a fresh token below.
+  doctor.passwordChangedAt = new Date();
   await doctor.save();
   return Response.json({ ok: true, token: await signToken(doctor.id) });
 });
