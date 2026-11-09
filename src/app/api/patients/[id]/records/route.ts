@@ -1,4 +1,4 @@
-import { deleteFile, formFile, saveUpload } from "@/lib/files";
+import { deleteFile, formFile, readUploadForm, saveUpload } from "@/lib/files";
 import { HttpError, handle } from "@/lib/http";
 import { ownedPatient } from "@/lib/patients";
 import { authed } from "@/lib/session";
@@ -22,7 +22,7 @@ export const POST = handle(async (request: Request, { params }: Ctx) => {
   const patientId = objectId((await params).id, "patient id");
   await ownedPatient(doctorId, patientId);
 
-  const form = await request.formData();
+  const form = await readUploadForm(request);
   const type = String(form.get("type") ?? "");
   const note = String(form.get("note") ?? "").trim();
   const file = formFile(form, "file");

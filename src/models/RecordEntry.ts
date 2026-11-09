@@ -1,4 +1,5 @@
 import { Schema, Types, model, models, type InferSchemaType, type Model } from "mongoose";
+import { toClient } from "@/models/toJSON";
 
 const StoredFileSchema = new Schema(
   {
@@ -20,16 +21,20 @@ const RecordEntrySchema = new Schema({
   note: { type: String, default: "" },
 });
 RecordEntrySchema.index({ doctorId: 1, patientId: 1, at: -1 });
+// Sync reads all of a doctor's entries by date.
+RecordEntrySchema.index({ doctorId: 1, at: 1 });
+
+// Works on a hydrated document's toJSON() output and on a `.lean()` result alike.
+export function entryToClient(ret: Record<string, unknown>) {
+  const out = toClient(ret, ["doctorId"]);
+  const file = out.file as { fileId: string } | null;
+  if (file) out.file = { ...file, url: `/api/files/${file.fileId}` };
+  return out;
+}
+
 RecordEntrySchema.set("toJSON", {
   versionKey: false,
-  transform: (_doc, ret: Record<string, unknown>) => {
-    ret.id = String(ret._id);
-    delete ret._id;
-    delete ret.doctorId;
-    const file = ret.file as { fileId: string } | null;
-    if (file) ret.file = { ...file, url: `/api/files/${file.fileId}` };
-    return ret;
-  },
+  transform: (_doc, ret: Record<string, unknown>) => entryToClient(ret),
 });
 
 export type RecordEntry = InferSchemaType<typeof RecordEntrySchema>;

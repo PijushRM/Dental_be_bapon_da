@@ -3,7 +3,7 @@ import { cleanJSON } from "@/models/toJSON";
 
 const PatientSchema = new Schema(
   {
-    doctorId: { type: Types.ObjectId, ref: "Doctor", required: true, index: true },
+    doctorId: { type: Types.ObjectId, ref: "Doctor", required: true },
     name: { type: String, required: true },
     age: { type: Number, required: true },
     phone: { type: String, required: true },
@@ -16,7 +16,10 @@ const PatientSchema = new Schema(
   { timestamps: { createdAt: true, updatedAt: false } },
 );
 PatientSchema.index({ doctorId: 1, nameKey: 1, phoneKey: 1 }, { unique: true });
-cleanJSON(PatientSchema, ["doctorId", "nameKey", "phoneKey"]);
+// Sync and the patient list read a doctor's patients by creation date.
+PatientSchema.index({ doctorId: 1, createdAt: -1 });
+export const PATIENT_HIDDEN = ["doctorId", "nameKey", "phoneKey"] as const;
+cleanJSON(PatientSchema, PATIENT_HIDDEN);
 
 export type Patient = InferSchemaType<typeof PatientSchema>;
 

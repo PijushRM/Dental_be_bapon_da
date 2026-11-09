@@ -10,7 +10,8 @@ const AppointmentSchema = new Schema(
   { timestamps: { createdAt: true, updatedAt: false } },
 );
 AppointmentSchema.index({ doctorId: 1, startsAt: 1 });
-cleanJSON(AppointmentSchema, ["doctorId"]);
+export const APPOINTMENT_HIDDEN = ["doctorId"] as const;
+cleanJSON(AppointmentSchema, APPOINTMENT_HIDDEN);
 
 export type Appointment = InferSchemaType<typeof AppointmentSchema>;
 
